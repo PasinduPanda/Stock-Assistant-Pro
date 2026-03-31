@@ -1,201 +1,164 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock & Template Manager</title>
-
+    <title>Stock Assistant Pro</title>
     <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-    <!-- Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #4F46E5;
             --primary-hover: #4338ca;
-            --secondary: #10B981;
-            --bg-color: #F3F4F6;
+            --bg: #F9FAFB;
             --card-bg: #FFFFFF;
-            --text-main: #1F2937;
+            --text-main: #111827;
             --text-muted: #6B7280;
-            --border-color: #E5E7EB;
+            --border: #E5E7EB;
+            --success: #10B981;
+            --error: #EF4444;
+            --warning: #F59E0B;
         }
 
+        * { box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
+            background-color: var(--bg);
             color: var(--text-main);
             margin: 0;
-            padding: 40px 20px;
             display: flex;
             justify-content: center;
+            padding: 40px 20px;
             min-height: 100vh;
         }
 
-        .container {
+        .app-container {
             width: 100%;
-            max-width: 1000px;
+            max-width: 900px;
             background: var(--card-bg);
-            border-radius: 16px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             padding: 40px;
-            display: flex;
-            flex-direction: column;
-            gap: 30px;
+            border: 1px solid var(--border);
         }
 
         header {
             text-align: center;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 20px;
-            margin-bottom: 10px;
+            margin-bottom: 40px;
         }
 
         h1 {
             font-size: 28px;
             font-weight: 700;
-            color: #111827;
-            margin: 0 0 10px 0;
-        }
-
-        p.subtitle {
-            color: var(--text-muted);
-            margin: 0;
-        }
-
-        .steps-container {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-
-        .step-card {
-            background: #F9FAFB;
-            border: 2px dashed #D1D5DB;
-            border-radius: 12px;
-            padding: 24px;
-            text-align: center;
-            transition: all 0.2s ease;
-            position: relative;
-        }
-
-        .step-card:hover {
-            border-color: var(--primary);
-            background: #F0F9FF;
-        }
-
-        .step-card.active {
-            border-color: var(--secondary);
-            background: #ECFDF5;
-        }
-
-        .step-title {
-            font-weight: 600;
+            margin: 0 0 8px 0;
             color: var(--text-main);
-            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
             font-size: 16px;
         }
 
-        input[type="file"] {
-            display: none;
+        .upload-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
         }
 
-        .custom-file-upload {
-            display: inline-block;
-            padding: 10px 20px;
-            cursor: pointer;
-            background: white;
-            border: 1px solid #D1D5DB;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            color: #374151;
-            transition: all 0.2s;
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 32px;
+            text-align: center;
+            transition: all 0.2s ease;
+            position: relative;
+            background: #fff;
         }
 
-        .custom-file-upload:hover {
-            background: #F3F4F6;
+        .drop-zone:hover {
+            border-color: var(--primary);
+            background: #F5F3FF;
+        }
+
+        .drop-zone.active {
+            border-color: var(--success);
+            background: #ECFDF5;
+        }
+
+        .drop-zone h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .drop-zone p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .file-input {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0; cursor: pointer;
         }
 
         .file-name {
-            margin-top: 10px;
-            font-size: 13px;
-            color: var(--primary);
+            margin-top: 12px;
+            font-size: 14px;
             font-weight: 500;
+            color: var(--primary);
             word-break: break-all;
         }
 
-        /* Preview Area */
         .preview-section {
-            background: #fff;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-            height: 350px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .preview-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .search-box {
-            padding: 8px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            width: 250px;
-            font-size: 14px;
+            margin-top: 32px;
+            border-top: 1px solid var(--border);
+            padding-top: 24px;
+            display: none;
         }
 
         .table-wrapper {
-            flex: 1;
+            max-height: 300px;
             overflow-y: auto;
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--border);
             border-radius: 8px;
+            margin: 16px 0;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
+            font-size: 14px;
         }
 
         th {
-            background: #F8F9FB;
+            background: #F9FAFB;
+            padding: 12px;
+            text-align: left;
+            position: sticky; top: 0;
+            border-bottom: 1px solid var(--border);
             color: #4B5563;
             font-weight: 600;
-            padding: 10px 14px;
-            text-align: left;
-            position: sticky;
-            top: 0;
-            z-index: 10;
         }
 
         td {
-            padding: 10px 14px;
-            border-bottom: 1px solid #E5E7EB;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
         }
 
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        .action-area {
+        .footer-actions {
+            margin-top: 32px;
             text-align: center;
-            margin-top: 10px;
         }
 
-        .btn-primary {
-            background-color: var(--primary);
+        .btn {
+            background: var(--primary);
             color: white;
             border: none;
             padding: 14px 28px;
@@ -211,482 +174,268 @@
             gap: 10px;
         }
 
-        .btn-primary:hover:not(:disabled) {
-            background-color: var(--primary-hover);
+        .btn:hover:not(:disabled) {
+            background: var(--primary-hover);
         }
 
-        .btn-primary:disabled {
-            background-color: #9CA3AF;
+        .btn:disabled {
+            background: #D1D5DB;
             cursor: not-allowed;
-            opacity: 0.7;
-        }
-
-        .btn-secondary {
-            background-color: white;
-            color: var(--primary);
-            border: 1px solid var(--border-color);
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-secondary:hover {
-            background-color: #F3F4F6;
-            border-color: var(--primary);
         }
 
         .status-msg {
-            margin-top: 15px;
+            margin-top: 16px;
             font-size: 14px;
             color: var(--text-muted);
-            min-height: 20px;
         }
 
-        .warning-banner {
-            background-color: #FEF2F2;
-            border: 1px solid #FCA5A5;
-            color: #991B1B;
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
             font-weight: 600;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            font-size: 12px;
         }
+        .badge-red { background: #FEE2E2; color: #B91C1C; }
+        .badge-yellow { background: #FEF3C7; color: #92400E; }
+        .badge-green { background: #D1FAE5; color: #065F46; }
 
-        /* Responsive */
-        @media (max-width: 700px) {
-            .steps-container {
-                grid-template-columns: 1fr;
-            }
+        @media (max-width: 600px) {
+            .upload-sections { grid-template-columns: 1fr; }
         }
     </style>
 </head>
-
 <body>
-
-    <div class="container">
+    <div class="app-container">
         <header>
-            <h1>Stock Assistant Pro (Clean)</h1>
-            <p class="subtitle">Update your stock sheet with today's counts, highlighting changes and low stock.</p>
+            <h1>Stock Assistant Pro</h1>
+            <p class="subtitle">Update template with warehouse stock and 10-7 Law rules</p>
         </header>
 
-        <div class="warning-banner">
-            ⚠️ ALWAYS CHECK YOUR SHEET BEFORE UPLOADING
-        </div>
-
-        <div class="steps-container">
-            <!-- Step 1 -->
-            <div class="step-card" id="step1Card">
-                <div class="step-title">1. Today's Stock Data</div>
-                <label for="sourceFile" class="custom-file-upload">
-                    Upload New Data (Excel)
-                </label>
-                <input type="file" id="sourceFile" accept=".xlsx,.xls">
-                <div id="sourceFileName" class="file-name"></div>
+        <div class="upload-sections">
+            <div class="drop-zone" id="zone1">
+                <h3>1. Today's Stock</h3>
+                <p>Upload Excel with SKUs and Availability</p>
+                <div id="file1Name" class="file-name"></div>
+                <input type="file" id="file1" class="file-input" accept=".xlsx,.xls">
             </div>
 
-            <!-- Step 2 -->
-            <div class="step-card" id="step2Card">
-                <div class="step-title">2. Yesterday's Stock (Template)</div>
-                <label for="historyFile" class="custom-file-upload">
-                    Upload Previous Sheet
-                </label>
-                <input type="file" id="historyFile" accept=".xlsx,.xls">
-                <div id="historyFileName" class="file-name"></div>
+            <div class="drop-zone" id="zone2">
+                <h3>2. Template (Yesterday's)</h3>
+                <p>Upload the file to be updated</p>
+                <div id="file2Name" class="file-name"></div>
+                <input type="file" id="file2" class="file-input" accept=".xlsx,.xls">
             </div>
         </div>
 
-        <!-- Preview Section -->
-        <div class="preview-section" id="previewSection" style="display:none;">
-            <div class="preview-header">
-                <h3 style="margin:0; font-size:16px;">Preview & Comparison</h3>
-                <input type="text" id="skuSearch" class="search-box" placeholder="Search SKU...">
-            </div>
+        <div class="preview-section" id="previewContainer">
+            <h2 style="font-size: 18px;">Data Preview</h2>
             <div class="table-wrapper">
                 <table id="previewTable">
                     <thead>
                         <tr>
                             <th>SKU</th>
-                            <th>Today's Stock</th>
-                            <th>Yesterday's Stock</th>
+                            <th>Stock</th>
+                            <th>Warehouse</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
                 </table>
             </div>
-            <div style="margin-top: 10px; font-size: 13px; color: #666;" id="recordCount"></div>
         </div>
 
-        <div class="action-area">
-            <button id="exportBtn" class="btn-primary" disabled>
-                <span>Process & Update Sheet</span>
-            </button>
-            <div id="status" class="status-msg">Waiting for files...</div>
+        <div class="footer-actions">
+            <button id="exportBtn" class="btn" disabled>Process & Export Excel</button>
+            <div id="status" class="status-msg">Upload both files to begin</div>
         </div>
     </div>
 
     <script>
-        // State management
         let state = {
-            todayData: {},    // SKU -> MaxStock
-            historyData: {},  // SKU -> MaxStock
-            templateBuffer: null, // Stores Yesterday's file raw buffer to use as template
+            todayData: {}, // SKU -> {stock: number, wh: string}
+            templateBuffer: null,
             templateName: ""
         };
 
         const els = {
-            sourceFile: document.getElementById('sourceFile'),
-            historyFile: document.getElementById('historyFile'),
-            sourceName: document.getElementById('sourceFileName'),
-            historyName: document.getElementById('historyFileName'),
-            previewSection: document.getElementById('previewSection'),
+            file1: document.getElementById('file1'),
+            file2: document.getElementById('file2'),
+            file1Name: document.getElementById('file1Name'),
+            file2Name: document.getElementById('file2Name'),
+            zone1: document.getElementById('zone1'),
+            zone2: document.getElementById('zone2'),
             exportBtn: document.getElementById('exportBtn'),
             status: document.getElementById('status'),
-            tableBody: document.querySelector('#previewTable tbody'),
-            search: document.getElementById('skuSearch'),
-            count: document.getElementById('recordCount'),
-            step1: document.getElementById('step1Card'),
-            step2: document.getElementById('step2Card')
+            previewContainer: document.getElementById('previewContainer'),
+            previewTable: document.querySelector('#previewTable tbody')
         };
 
-        // --- Helper: Read and Parse Max Stock ---
-        function parseStockFile(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = function (event) {
-                    try {
-                        const data = new Uint8Array(event.target.result);
-                        const workbook = XLSX.read(data, { type: 'array' });
-                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const normalize = (val) => val ? String(val).trim().toUpperCase() : "";
 
-                        // 1. Header Detection
-                        const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                        let headerRowIndex = 0;
-                        let foundHeader = false;
-
-                        for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
-                            const row = rawRows[i];
-                            if (!row || row.length === 0) continue;
-                            const rowStr = row.map(c => String(c).trim().toUpperCase());
-                            const hasSku = rowStr.some(c => /SKU|PRODUCT NO|ITEM NO|CODE/.test(c));
-                            const hasStock = rowStr.some(c => /AVAIL|STOCK|QTY|QUANTITY|VOLUME/.test(c));
-                            if (hasSku && hasStock) { headerRowIndex = i; foundHeader = true; break; }
-                            if (hasSku && !foundHeader) { headerRowIndex = i; foundHeader = true; }
-                        }
-
-                        // 2. Parse Data to JSON
-                        const rows = XLSX.utils.sheet_to_json(sheet, { range: headerRowIndex, defval: "" });
-                        if (rows.length === 0) { resolve({}); return; }
-
-                        // 3. Resolve Columns
-                        const headers = Object.keys(rows[0]);
-                        let skuKey = headers.find(h => /sku|product|item|code/i.test(h));
-                        let stockKey = headers.find(h => /availability|avail|stock|qty|quantity|volume/i.test(h));
-
-                        // 4. Data Sniffing for main column
-                        let validStockCount = 0;
-                        const sampleSize = Math.min(rows.length, 200);
-
-                        if (stockKey) {
-                            for (let i = 0; i < sampleSize; i++) {
-                                const val = rows[i][stockKey];
-                                if (val !== undefined && val !== "" && !isNaN(parseInt(val))) validStockCount++;
-                            }
-                        }
-
-                        if (validStockCount === 0) {
-                            console.warn("Main Stock Key empty, trying fallback sniff...");
-                            stockKey = null; // Reset to force search
-                            for (const key of headers) {
-                                if (key === skuKey) continue;
-                                let numCount = 0;
-                                for (let i = 0; i < sampleSize; i++) {
-                                    const val = rows[i][key];
-                                    if (val !== undefined && val !== "" && !isNaN(parseInt(val))) numCount++;
-                                }
-                                if (numCount > 0) { stockKey = key; console.log("Found alt stock key:", key); break; }
-                            }
-                        }
-
-                        const stockMap = {};
-                        rows.forEach(row => {
-                            const skuRaw = skuKey ? row[skuKey] : (row["SKU"] || row["Product No"]);
-                            let stockRaw = 0;
-                            if (stockKey && row[stockKey] !== undefined && row[stockKey] !== "") {
-                                stockRaw = row[stockKey];
-                            }
-
-                            if (skuRaw) {
-                                const sku = String(skuRaw).trim();
-                                let stock = parseInt(stockRaw, 10);
-                                if (isNaN(stock)) stock = 0;
-
-                                // FALLBACK: If stock seems missing/zero, scan other columns
-                                if (stock === 0) {
-                                    for (const key in row) {
-                                        if (key === skuKey || key === "SKU" || key === "Product No") continue;
-                                        const potentialVal = parseInt(row[key], 10);
-                                        if (!isNaN(potentialVal) && potentialVal > 0) {
-                                            stock = potentialVal;
-                                            break;
-                                        }
-                                    }
-                                }
-
-                                if (stockMap[sku] === undefined || stock > stockMap[sku]) {
-                                    stockMap[sku] = stock;
-                                }
-                            }
-                        });
-                        resolve(stockMap);
-                    } catch (err) {
-                        reject(err);
-                    }
-                };
-                reader.readAsArrayBuffer(file);
-            });
-        }
-
-        // --- Step 1: Today's Stock ---
-        els.sourceFile.addEventListener('change', async function (e) {
+        // File 1: Today's Stock
+        els.file1.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            els.sourceName.textContent = file.name;
-            els.step1.classList.add('active');
-            els.status.textContent = "Processing new data...";
+            els.file1Name.textContent = file.name;
+            els.zone1.classList.add('active');
+            els.status.textContent = "Processing Today's Stock...";
 
-            try {
-                state.todayData = await parseStockFile(file);
-                els.status.textContent = `Loaded ${Object.keys(state.todayData).length} SKUs from today.`;
-                renderTable();
-                els.previewSection.style.display = 'flex';
-                checkReady();
-            } catch (err) {
-                console.error(err);
-                alert("Error reading file: " + err.message);
-                els.sourceFile.value = "";
-            }
-        });
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-        // --- Step 2: Yesterday's Stock (Template) ---
-        els.historyFile.addEventListener('change', async function (e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            els.historyName.textContent = file.name;
-            els.step2.classList.add('active');
-            els.status.textContent = "Processing template...";
-            state.templateName = file.name;
+                if (rows.length > 0) {
+                    const keys = Object.keys(rows[0]);
+                    const skuKey = keys.find(k => normalize(k).includes("SKU"));
+                    const stockKey = keys.find(k => {
+                        const n = normalize(k);
+                        return n.includes("AVAIL") || n.includes("STOCK") || n.includes("QTY") || n.includes("VOL");
+                    });
+                    const whKey = keys.find(k => normalize(k).includes("WAREHOUSE") || normalize(k).includes("WH"));
 
-            const bufferReader = new FileReader();
-            bufferReader.onload = async function (event) {
-                state.templateBuffer = event.target.result;
-                try {
-                    state.historyData = await parseStockFile(file);
-                    els.status.textContent = `Loaded template: ${Object.keys(state.historyData).length} items.`;
-                    renderTable();
+                    const map = {};
+                    rows.forEach(row => {
+                        const sku = normalize(row[skuKey]);
+                        const stock = parseInt(row[stockKey], 10);
+                        const wh = whKey ? String(row[whKey]).trim() : "Unknown";
+
+                        if (sku && !isNaN(stock)) {
+                            // Warehouse Logic: Keep MAX stock for a SKU if multiple warehouses exist
+                            if (map[sku] === undefined || stock > map[sku].stock) {
+                                map[sku] = { stock, wh };
+                            }
+                        }
+                    });
+                    state.todayData = map;
+                    els.status.textContent = `Loaded ${Object.keys(map).length} unique SKUs.`;
                     checkReady();
-                } catch (err) {
-                    console.error(err);
-                    alert("Error reading template file: " + err.message);
-                    els.historyFile.value = "";
+                    renderPreview();
                 }
             };
-            bufferReader.readAsArrayBuffer(file);
+            reader.readAsArrayBuffer(file);
         });
 
-        // --- UI Helpers ---
-        function renderTable(filter = "") {
-            els.tableBody.innerHTML = "";
-            const allSkus = new Set([...Object.keys(state.todayData), ...Object.keys(state.historyData)]);
-            const sortedSkus = Array.from(allSkus).sort();
-            let visibleCount = 0;
-            const fragment = document.createDocumentFragment();
-            let rendered = 0;
-            for (const sku of sortedSkus) {
-                if (rendered > 300) break;
-                if (sku.toLowerCase().includes(filter.toLowerCase())) {
-                    const tr = document.createElement("tr");
-                    const today = state.todayData[sku] !== undefined ? state.todayData[sku] : "-";
-                    const yday = state.historyData[sku] !== undefined ? state.historyData[sku] : "-";
-                    tr.innerHTML = `<td>${sku}</td><td>${today}</td><td>${yday}</td>`;
-                    fragment.appendChild(tr);
-                    visibleCount++;
-                    rendered++;
-                }
-            }
-            els.tableBody.appendChild(fragment);
-            els.count.textContent = `Showing top matching items`;
-        }
+        // File 2: Template
+        els.file2.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            els.file2Name.textContent = file.name;
+            els.zone2.classList.add('active');
+            state.templateName = file.name;
 
-        els.search.addEventListener('input', (e) => renderTable(e.target.value));
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                state.templateBuffer = event.target.result;
+                checkReady();
+            };
+            reader.readAsArrayBuffer(file);
+        });
 
         function checkReady() {
             if (Object.keys(state.todayData).length > 0 && state.templateBuffer) {
                 els.exportBtn.disabled = false;
+                els.status.textContent = "Files ready. Click export to process.";
             }
         }
 
-        // --- Export Logic ---
+        function renderPreview() {
+            els.previewContainer.style.display = 'block';
+            els.previewTable.innerHTML = "";
+            const skus = Object.keys(state.todayData).slice(0, 50); // Preview first 50
+            skus.forEach(sku => {
+                const item = state.todayData[sku];
+                const tr = document.createElement('tr');
+                let badge = "";
+                if (item.stock <= 7) badge = '<span class="badge badge-red">Low (<=7)</span>';
+                else if (item.stock <= 10) badge = '<span class="badge badge-yellow">Mid (8-10)</span>';
+                else badge = '<span class="badge badge-green">Good (>10)</span>';
+
+                tr.innerHTML = `<td>${sku}</td><td>${item.stock}</td><td>${item.wh}</td><td>${badge}</td>`;
+                els.previewTable.appendChild(tr);
+            });
+        }
+
+        // Export with 10-7 Law and Warehouse Logic
         els.exportBtn.addEventListener('click', async () => {
             try {
+                els.status.textContent = "Processing Excel...";
                 els.exportBtn.disabled = true;
-                els.exportBtn.textContent = "Processing...";
 
                 const workbook = new ExcelJS.Workbook();
                 await workbook.xlsx.load(state.templateBuffer);
                 const worksheet = workbook.getWorksheet(1);
 
-                // 1. Locate Columns
-                let skuCol = -1;
-                let availCol = -1;
-
-                worksheet.eachRow((row, rowNumber) => {
-                    if (skuCol !== -1 && availCol !== -1) return;
-                    row.eachCell((cell, colNum) => {
-                        const val = cell.value ? String(cell.value).trim().toUpperCase() : "";
-                        if (val.includes("SKU") || val.includes("PRODUCT")) skuCol = colNum;
-                        if (val.includes("AVAIL") || val.includes("STOCK") || val.includes("QTY")) availCol = colNum;
-                    });
+                // Find Columns in Template
+                let skuCol = -1, stockCol = -1, whCol = -1;
+                worksheet.getRow(1).eachCell((cell, colNum) => {
+                    const v = normalize(cell.value);
+                    if (v.includes("SKU")) skuCol = colNum;
+                    if (v.includes("AVAIL") || v.includes("STOCK") || v.includes("QTY")) stockCol = colNum;
+                    if (v.includes("WH") || v.includes("WAREHOUSE")) whCol = colNum;
                 });
 
-                if (skuCol === -1 || availCol === -1) throw new Error("Could not find 'SKU' or 'Availability' columns.");
+                // Fallback: SKU is usually A (1), Stock is B (2) if not found
+                if (skuCol === -1) skuCol = 1;
+                if (stockCol === -1) stockCol = 2;
 
-                // 0. NUCLEAR CLEANSE: Remove all Conditional Formatting and Tables
-                worksheet.conditionalFormats = [];
+                worksheet.eachRow((row, rowNumber) => {
+                    if (rowNumber === 1) return; // Skip header
 
-                // Remove tables (if any) to prevent style interference
-                try {
-                    if (worksheet.tables) {
-                        const tableNames = Object.keys(worksheet.tables);
-                        for (const name of tableNames) {
-                            worksheet.removeTable(name);
+                    const skuValue = normalize(row.getCell(skuCol).value);
+                    if (skuValue && state.todayData[skuValue]) {
+                        const match = state.todayData[skuValue];
+                        const stockCell = row.getCell(stockCol);
+
+                        // Update Stock
+                        stockCell.value = match.stock;
+                        stockCell.numberFormat = '0';
+
+                        // Implement 10-7 Law
+                        let color = 'FFD1FAE5'; // Default Green (Light)
+                        let textColor = 'FF065F46';
+                        
+                        if (match.stock <= 7) {
+                            color = 'FFFEE2E2'; // Red
+                            textColor = 'FFB91C1C';
+                        } else if (match.stock <= 10) {
+                            color = 'FFFEF3C7'; // Yellow
+                            textColor = 'FF92400E';
+                        }
+
+                        stockCell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: color }
+                        };
+                        stockCell.font = {
+                            color: { argb: textColor },
+                            bold: true
+                        };
+
+                        // Warehouse Function: Update if template has WH column
+                        if (whCol !== -1) {
+                            row.getCell(whCol).value = match.wh;
                         }
                     }
-                } catch (e) {
-                    console.warn("Table removal error (ignoring):", e);
-                }
-
-                // 1. Process Rows
-
-                // Nuclear Option for Styles (Columns B and Availability)
-                try {
-                    const colB = worksheet.getColumn(2);
-                    colB.fill = { type: 'pattern', pattern: 'none' };
-                    colB.border = null;
-
-                    const colAvail = worksheet.getColumn(availCol);
-                    colAvail.fill = { type: 'pattern', pattern: 'none' };
-                    colAvail.border = null;
-                } catch (e) { console.warn(e); }
-
-                worksheet.eachRow((row, rowNumber) => {
-                    try {
-                        const skuCell = row.getCell(skuCol);
-                        const skuVal = skuCell.value ? String(skuCell.value).trim() : null;
-
-                        if (skuVal && state.todayData[skuVal] !== undefined) {
-                            const todayStock = state.todayData[skuVal];
-                            const yesterdayStock = state.historyData[skuVal] !== undefined ? state.historyData[skuVal] : -1;
-                            const prev = yesterdayStock === -1 ? 0 : yesterdayStock;
-                            const isIncreased = todayStock > prev;
-
-                            // Define Cells
-                            const colBCell = row.getCell(2); // Column B
-                            const availCell = row.getCell(availCol);
-
-                            let valForB = todayStock;
-                            let colorForB = null;
-                            let valForAvail = null;
-                            let colorForAvail = null;
-
-                            // LOGIC
-                            // 10-7 Law: <=7 Red, 8-10 Yellow, >10 Green (Safe)
-                            // Colors applied directly to Stock Column (B)
-                            // Column C is cleared/unused.
-
-                            let warningColor = null;
-                            if (todayStock <= 7) {
-                                warningColor = 'FFFF0000'; // Red
-                            } else if (todayStock <= 10) {
-                                warningColor = 'FFFFFF00'; // Yellow
-                            } else {
-                                warningColor = 'FF00FF00'; // Green (> 10)
-                            }
-
-                            valForB = todayStock;
-                            colorForB = warningColor;
-
-                            valForAvail = null; // Clear Availability Column
-                            colorForAvail = null;
-
-                            // WRITE Cells
-                            colBCell.value = valForB;
-                            colBCell.numberFormat = '0'; // Ensure number format
-                            if (colorForB) {
-                                colBCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorForB } };
-                            } else {
-                                colBCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
-                            }
-                            colBCell.border = null;
-
-                            // Clear Availability Cell
-                            availCell.value = null;
-                            availCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
-                            availCell.border = null;
-
-                            // Clear neighbor
-                            if (availCol + 1 !== 2) {
-                                const oldNeighbor = row.getCell(availCol + 1);
-                                oldNeighbor.value = null;
-                                oldNeighbor.fill = null;
-                                oldNeighbor.border = null;
-                            }
-                        } else {
-                            // NO MATCH: Force White
-                            const colBCell = row.getCell(2);
-                            const availCell = row.getCell(availCol);
-                            colBCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
-                            availCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
-                            colBCell.border = null;
-                            availCell.border = null;
-                        }
-                    } catch (rowErr) { console.warn(rowErr); }
                 });
 
-                // Download
+                // Write and Save
                 const buffer = await workbook.xlsx.writeBuffer();
-                const blob = new Blob([buffer], { type: "application/octet-stream" });
-                const url = window.URL.createObjectURL(blob);
-                const anchor = document.createElement("a");
-                anchor.href = url;
-                anchor.download = "Update_file.xlsx";
-                document.body.appendChild(anchor);
-                anchor.click();
-                document.body.removeChild(anchor);
-                setTimeout(() => { window.URL.revokeObjectURL(url); }, 2000);
+                const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+                saveAs(blob, "Update_Stock_" + state.templateName);
 
-                els.status.textContent = "Download complete!";
+                els.status.textContent = "Done! File downloaded.";
                 els.exportBtn.disabled = false;
-                els.exportBtn.textContent = "Download Sheet";
-                setTimeout(() => { els.exportBtn.textContent = "Process & Update Sheet"; }, 4000);
 
             } catch (err) {
                 console.error(err);
-                alert("Error: " + err.message);
+                alert("Error processing Excel: " + err.message);
                 els.exportBtn.disabled = false;
             }
         });
-
     </script>
-
 </body>
-
 </html>
