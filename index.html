@@ -424,7 +424,7 @@
                 let isNewWhColumn = false;
                 if (whCol === -1) {
                     whCol = Math.max(skuCol, stockCol) + 1;
-                    const whHeader = row.getCell(whCol); // Will define header later
+                    const whHeader = headerRow.getCell(whCol); 
                     isNewWhColumn = true;
                 }
 
