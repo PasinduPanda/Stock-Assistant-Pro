@@ -38,7 +38,7 @@
 
         .app-container {
             width: 100%;
-            max-width: 900px;
+            max-width: 1000px;
             background: var(--card-bg);
             border-radius: 12px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -218,20 +218,20 @@
     <div class="app-container">
         <header>
             <h1>Stock Assistant Pro</h1>
-            <p class="subtitle">Update template with Warehouse & 10-7 Law colors</p>
+            <p class="subtitle">Update Template with Multi-Column Stock Sync & 10-7 Law</p>
         </header>
 
         <div class="upload-sections">
             <div class="drop-zone" id="zone1">
                 <h3>1. Today's Stock</h3>
-                <p>Upload Excel with SKU & Availability</p>
+                <p>Upload source file with SKU & Stock</p>
                 <div id="file1Name" class="file-name"></div>
                 <input type="file" id="file1" class="file-input" accept=".xlsx,.xls">
             </div>
 
             <div class="drop-zone" id="zone2">
                 <h3>2. Template File</h3>
-                <p>The sheet you want to update</p>
+                <p>Upload file to be updated</p>
                 <div id="file2Name" class="file-name"></div>
                 <input type="file" id="file2" class="file-input" accept=".xlsx,.xls">
             </div>
@@ -286,7 +286,7 @@
 
         const normalize = (val) => val ? String(val).trim().toUpperCase() : "";
 
-        // File 1 Parsing: Robust detection of SKU, Stock, and Warehouse
+        // File 1 Parsing: Extracts SKU, Stock and Warehouse info
         els.file1.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -304,21 +304,13 @@
                     if (rows.length === 0) throw new Error("File is empty.");
 
                     const keys = Object.keys(rows[0]);
+                    const skuKey = keys.find(k => /SKU|PRODUCT|CODE|ITEM/i.test(normalize(k)));
+                    const stockKey = keys.find(k => /AVAIL|STOCK|QTY|VOL|QUANTITY/i.test(normalize(k)));
+                    let whKey = keys.find(k => /WH|WAREHOUSE|LOCATION|LOC|STORE/i.test(normalize(k)));
                     
-                    // 1. Find SKU Key
-                    const skuKey = keys.find(k => /SKU|PRODUCT|CODE|ITEM/i.test(k));
-                    
-                    // 2. Find Stock Key
-                    const stockKey = keys.find(k => /AVAIL|STOCK|QTY|VOL|QUANTITY/i.test(k));
-                    
-                    // 3. Find Warehouse Key (Robust)
-                    let whKey = keys.find(k => /WH|WAREHOUSE|LOCATION|LOC|STORE/i.test(k));
-                    
-                    // Fallback for WH: Find the first non-numeric column that isn't the SKU
                     if (!whKey) {
                         whKey = keys.find(k => {
                             if (k === skuKey || k === stockKey) return false;
-                            // Check if first 5 rows in this column have strings
                             return rows.slice(0, 5).some(r => typeof r[k] === 'string' && r[k].length > 1);
                         });
                     }
@@ -330,12 +322,9 @@
                         const whValue = whKey ? String(row[whKey]).trim() : "";
 
                         if (sku && !isNaN(stock)) {
-                            // Warehouse Logic: Track Max Stock for each SKU
+                            // Max Stock Logic: Keep the highest value across sources
                             if (map[sku] === undefined || stock > map[sku].stock) {
-                                map[sku] = { 
-                                    stock: stock, 
-                                    wh: whValue || "Main Warehouse" 
-                                };
+                                map[sku] = { stock, wh: whValue || "Main Warehouse" };
                             }
                         }
                     });
@@ -343,11 +332,11 @@
                     state.todayData = map;
                     els.file1Name.textContent = file.name;
                     els.zone1.classList.add('active');
-                    els.status.textContent = `Extracted ${Object.keys(map).length} unique SKU records.`;
+                    els.status.textContent = `Extracted ${Object.keys(map).length} unique records. Ready for merge.`;
                     checkReady();
                     renderPreview();
                 } catch (err) {
-                    alert("Error reading Today's Stock: " + err.message);
+                    alert("Error: " + err.message);
                     els.file1Name.textContent = "";
                 }
             };
@@ -373,7 +362,7 @@
         function checkReady() {
             if (Object.keys(state.todayData).length > 0 && state.templateBuffer) {
                 els.exportBtn.disabled = false;
-                els.status.textContent = "Ready to merge data.";
+                els.status.textContent = "Both files uploaded. Click to export.";
             }
         }
 
@@ -392,66 +381,57 @@
                 tr.innerHTML = `<td><strong>${sku}</strong></td><td>${item.stock}</td><td>${item.wh}</td><td>${badge}</td>`;
                 els.previewTable.appendChild(tr);
             });
-            els.matchCount.textContent = `Showing first 100 items...`;
+            els.matchCount.textContent = `Previewing first 100 matches...`;
         }
 
-        // --- Export Logic with Auto-Warehouse Addition ---
+        // --- Export Logic with Multi-Column Stock Sync ---
         els.exportBtn.addEventListener('click', async () => {
             try {
-                els.status.textContent = "Generating final Excel...";
+                els.status.textContent = "Syncing and coloring Excel...";
                 els.exportBtn.disabled = true;
 
                 const workbook = new ExcelJS.Workbook();
                 await workbook.xlsx.load(state.templateBuffer);
                 const worksheet = workbook.getWorksheet(1);
-
-                // Analyze Columns in Template Header (Row 1)
-                let skuCol = -1, stockCol = -1, whCol = -1;
-                const headerRow = worksheet.getRow(1);
                 
+                const headerRow = worksheet.getRow(1);
+                let skuCol = -1, whCol = -1;
+                let stockCols = []; // New approach: Track all columns that look like stock
+
                 headerRow.eachCell((cell, colNum) => {
                     const v = normalize(cell.value);
-                    if (/SKU|PRODUCT|CODE/i.test(v)) skuCol = colNum;
-                    if (/AVAIL|STOCK|QTY|QTY/i.test(v)) stockCol = colNum;
-                    if (/WH|WARE/i.test(v)) whCol = colNum;
+                    if (/SKU|PRODUCT|CODE/i.test(v)) {
+                         skuCol = colNum;
+                    } else if (/AVAIL|STOCK|QTY|VOL|QUANTITY/i.test(v)) {
+                         stockCols.push(colNum); // Store ALL stock columns
+                    } else if (/WH|WARE/i.test(v)) {
+                         whCol = colNum;
+                    }
                 });
 
-                // FALLBACKS
-                if (skuCol === -1) skuCol = 1; // Assume A
-                if (stockCol === -1) stockCol = 2; // Assume B
+                // Fallbacks if detection failed
+                if (skuCol === -1) skuCol = 1; 
+                if (stockCols.length === 0) stockCols = [2]; // Default to B
                 
-                // AUTO-ADD WAREHOUSE: If not found, add it to the next available column
-                let isNewWhColumn = false;
+                // Ensure WH column is distinct if auto-adding
                 if (whCol === -1) {
-                    whCol = Math.max(skuCol, stockCol) + 1;
-                    const whHeader = headerRow.getCell(whCol); 
-                    isNewWhColumn = true;
+                    whCol = Math.max(skuCol, ...stockCols) + 1;
+                    const whHeader = headerRow.getCell(whCol);
+                    whHeader.value = "Warehouse Path";
+                    whHeader.font = { bold: true };
+                    whHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE5E7EB' } };
                 }
 
-                // Update Header if newly added
-                if (isNewWhColumn) {
-                    const cell = headerRow.getCell(whCol);
-                    cell.value = "Warehouse";
-                    cell.font = { bold: true };
-                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE5E7EB' } }; // Light gray header
-                }
-
-                let updateCount = 0;
+                let syncCount = 0;
 
                 worksheet.eachRow((row, rowNumber) => {
-                    if (rowNumber === 1) return; // Skip title row
+                    if (rowNumber === 1) return; // Skip Header
 
                     const skuValue = normalize(row.getCell(skuCol).value);
                     if (skuValue && state.todayData[skuValue]) {
                         const match = state.todayData[skuValue];
-                        const stockCell = row.getCell(stockCol);
-                        const whCell = row.getCell(whCol);
-
-                        // 1. Update Stock Value
-                        stockCell.value = match.stock;
-                        stockCell.numberFormat = '0';
-
-                        // 2. Perform 10-7 Law Coloring
+                        
+                        // Define Color Scheme (10-7 Law)
                         let bgColor = 'FFD1FAE5'; // Green
                         let textColor = 'FF065F46';
                         if (match.stock <= 7) {
@@ -462,24 +442,37 @@
                             textColor = 'FF92400E';
                         }
 
-                        stockCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
-                        stockCell.font = { color: { argb: textColor }, bold: true };
-                        stockCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'}, color: {argb: 'FFD1D5DB'} };
+                        const fillStyle = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                        const fontStyle = { color: { argb: textColor }, bold: true };
+                        const borderStyle = { 
+                            top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'}, 
+                            color: {argb: 'FFD1D5DB'} 
+                        };
 
-                        // 3. Update Warehouse Status
+                        // Update ALL detected availability columns to ensure consistency
+                        stockCols.forEach(col => {
+                            const cell = row.getCell(col);
+                            cell.value = match.stock;
+                            cell.numberFormat = '0';
+                            cell.fill = fillStyle;
+                            cell.font = fontStyle;
+                            cell.border = borderStyle;
+                        });
+
+                        // Update Warehouse column
+                        const whCell = row.getCell(whCol);
                         whCell.value = match.wh;
                         whCell.font = { color: { argb: 'FF4B5563' } };
                         
-                        updateCount++;
+                        syncCount++;
                     }
                 });
 
-                // Write Buffer
                 const buffer = await workbook.xlsx.writeBuffer();
                 const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-                saveAs(blob, "UPDATED_" + state.templateName);
+                saveAs(blob, "SYNCED_" + state.templateName);
 
-                els.status.textContent = `Successfully updated ${updateCount} rows!`;
+                els.status.textContent = `Merged ${syncCount} SKUs across ${stockCols.length} columns!`;
                 els.exportBtn.disabled = false;
 
             } catch (err) {
